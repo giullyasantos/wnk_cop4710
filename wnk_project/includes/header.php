@@ -40,7 +40,12 @@ if (session_status() === PHP_SESSION_NONE) {
                             <li><a href="my_claims.php">My Claimed Meals</a></li>
                         <?php endif; ?>
                         
-                        <li><a href="profile_edit.php">Profile</a></li>
+                        <?php if (hasRole('admin')): ?>
+                            <li><a href="admin_dashboard.php">Admin Dashboard</a></li>
+                            <li><a href="admin_member_lookup.php">Member Lookup</a></li>
+                        <?php endif; ?>
+                        
+                        <li><a href="profile_edit.php">Edit Profile</a></li>
                         <li><a href="logout.php">Logout</a></li>
                     <?php else: ?>
                         <li><a href="index.php">Home</a></li>
