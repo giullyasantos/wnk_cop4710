@@ -108,6 +108,27 @@ header {
     align-items: center;
 }
 
+.nav-welcome {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg-secondary);
+}
+
+.role-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--color-accent) 0%, #0550ae 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .nav-menu a {
     color: var(--color-text-primary);
     text-decoration: none;
