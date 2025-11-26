@@ -27,7 +27,12 @@ if (!$result) {
 ?>
 
 <div class="container">
-    <h1>🛒 Browse Available Meals</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>🛒 Browse Available Meals</h1>
+        <a href="cashout.php" class="btn btn-success" style="background-color: #1a7f37; text-decoration: none; padding: 0.75rem 1.5rem;">
+            🛍️ Checkout
+        </a>
+    </div>
     <p>Get delicious meals from local restaurants at discounted prices!</p>
     
     <?php if ($result && $result->num_rows > 0): ?>
@@ -58,7 +63,7 @@ if (!$result) {
                     </p>
                     
                     <?php if ($plate['available_count'] > 0): ?>
-                        <a href="purchase_meal.php?plate_id=<?php echo $plate['plate_id']; ?>" class="btn btn-primary">
+                        <a href="buy_now.php?plate_id=<?php echo $plate['plate_id']; ?>" class="btn btn-primary">
                             Buy Now
                         </a>
                     <?php else: ?>

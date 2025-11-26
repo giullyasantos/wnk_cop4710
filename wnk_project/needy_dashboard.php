@@ -26,7 +26,12 @@ if (!$result) {
 ?>
 
 <div class="container">
-    <h1>🤝 Free Meals Available</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>🤝 Free Meals Available</h1>
+        <a href="needy_cashout.php" class="btn btn-success" style="background-color: #1a7f37; text-decoration: none; padding: 0.75rem 1.5rem;">
+            📋 My Claims
+        </a>
+    </div>
     <p>Community members have donated delicious meals for you to claim at no cost!</p>
     
     <div class="needy-info">

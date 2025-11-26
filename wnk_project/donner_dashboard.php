@@ -27,7 +27,12 @@ if (!$result) {
 ?>
 
 <div class="container">
-    <h1>❤️ Donate Meals to Those in Need</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>❤️ Donate Meals to Those in Need</h1>
+        <a href="donner_cashout.php" class="btn btn-success" style="background-color: #1a7f37; text-decoration: none; padding: 0.75rem 1.5rem;">
+            💝 Donation History
+        </a>
+    </div>
     <p>Pay it forward by purchasing meals for community members in need. Your donation directly helps!</p>
     
     <div class="donor-info">
