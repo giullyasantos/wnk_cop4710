@@ -1,6 +1,6 @@
 <?php
 require_once 'includes/config.php';
-// requireRole('admin'); // Commented out for skeleton
+requireRole('admin'); 
 $page_title = 'Admin Dashboard';
 include 'includes/header.php';
 ?>

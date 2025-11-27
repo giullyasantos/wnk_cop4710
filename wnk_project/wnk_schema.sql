@@ -153,6 +153,6 @@ CREATE INDEX idx_needy_claim_needy ON Needy_Claim(needy_id);
 CREATE INDEX idx_needy_claim_donation ON Needy_Claim(donation_id);
 CREATE INDEX idx_needy_claim_status ON Needy_Claim(status);
 
--- Insert a default admin user (password: admin123 - should be hashed in production)
+-- Insert a default admin user (password: password - should be hashed in production)
 INSERT INTO Users (email, password_hash, user_type, first_name, last_name, street, city, state, zip_code)
 VALUES ('admin@wnk.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'System', 'Administrator', '123 Admin St', 'Orlando', 'FL', '32816');
