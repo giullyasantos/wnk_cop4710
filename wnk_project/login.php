@@ -12,16 +12,16 @@ if (isLoggedIn()) {
             $redirect = 'restaurant_dashboard.php';
             break;
         case 'customer':
-            $redirect = 'customer_browse.php';
+            $redirect = 'customer_dashboard.php';
             break;
         case 'donner':
-            $redirect = 'donner_browse.php';
+            $redirect = 'donner_dashboard.php';
             break;
         case 'needy':
-            $redirect = 'needy_browse.php';
+            $redirect = 'needy_dashboard.php';
             break;
         case 'admin':
-            $redirect = 'admin_dashboard.php';
+            $redirect = 'index.php';
             break;
         default:
             $redirect = 'index.php';
@@ -67,13 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         header("Location: restaurant_dashboard.php");
                         break;
                     case 'customer':
-                        header("Location: index.php");
+                        header("Location: customer_dashboard.php");
                         break;
                     case 'donner':
-                        header("Location: index.php");
+                        header("Location: donner_dashboard.php");
                         break;
                     case 'needy':
-                        header("Location: index.php");
+                        header("Location: needy_dashboard.php");
                         break;
                     case 'admin':
                         header("Location: index.php");

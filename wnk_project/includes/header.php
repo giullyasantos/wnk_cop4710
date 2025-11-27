@@ -20,12 +20,24 @@ if (session_status() === PHP_SESSION_NONE) {
                 </div>
                 <ul class="nav-menu">
                     <?php if (isLoggedIn()): ?>
-                        <li>Welcome, <?php echo htmlspecialchars($_SESSION['first_name']); ?>!</li>
+                        <li class="nav-welcome">
+                            <span>Welcome, <?php echo htmlspecialchars($_SESSION['first_name']); ?>!</span>
+                            <span class="role-badge"><?php echo getRoleDisplayName(); ?></span>
+                        </li>
                         
                         <?php if (hasRole('restaurant')): ?>
                             <li><a href="restaurant_dashboard.php">Dashboard</a></li>
                             <li><a href="restaurant_add_plate.php">Add Plate</a></li>
                             <li><a href="restaurant_manage_plates.php">Manage Plates</a></li>
+                        <?php elseif (hasRole('customer')): ?>
+                            <li><a href="customer_dashboard.php">Browse Meals</a></li>
+                            <li><a href="my_orders.php">My Orders</a></li>
+                        <?php elseif (hasRole('donner')): ?>
+                            <li><a href="donner_dashboard.php">Donate Meals</a></li>
+                            <li><a href="my_donations.php">My Donations</a></li>
+                        <?php elseif (hasRole('needy')): ?>
+                            <li><a href="needy_dashboard.php">Available Meals</a></li>
+                            <li><a href="my_claims.php">My Claimed Meals</a></li>
                         <?php endif; ?>
                         
                         <?php if (hasRole('admin')): ?>
