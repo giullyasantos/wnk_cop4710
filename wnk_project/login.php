@@ -21,7 +21,7 @@ if (isLoggedIn()) {
             $redirect = 'needy_dashboard.php';
             break;
         case 'admin':
-            $redirect = 'index.php';
+            $redirect = 'admin_dashboard.php';
             break;
         default:
             $redirect = 'index.php';
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         header("Location: needy_dashboard.php");
                         break;
                     case 'admin':
-                        header("Location: index.php");
+                        header("Location: admin_dashboard.php");
                         break;
                     default:
                         header("Location: index.php");

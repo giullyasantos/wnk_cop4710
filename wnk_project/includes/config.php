@@ -115,7 +115,7 @@ function getUserDashboardURL() {
         case 'needy':
             return 'needy_dashboard.php';
         case 'admin':
-            return 'index.php';
+            return 'admin_dashboard.php';
         default:
             return 'index.php';
     }
