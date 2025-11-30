@@ -1,205 +1,265 @@
 <?php
 require_once 'includes/config.php';
+require_once 'includes/cart.php';
 requireRole('donner');
 
-$page_title = 'Cashout - Donation History';
+$page_title = 'Cashout - Donations';
+$error = '';
+$success = '';
 $db = getDB();
 $donner_id = $_SESSION['user_id'];
 
-// Get summary statistics
-$stmt = $db->prepare("SELECT 
-                        COUNT(DISTINCT d.donation_id) as total_donations,
-                        SUM(d.quantity_available) as total_meals_donated,
-                        SUM(d.total_amount) as total_value,
-                        COUNT(DISTINCT p.plate_id) as unique_meals
-                     FROM Donations d
-                     JOIN Plates p ON d.plate_id = p.plate_id
-                     WHERE d.donner_id = ?");
+// Get donner payment information
+$stmt = $db->prepare("SELECT credit_card_number, card_expiry, card_cvv FROM Donners WHERE donner_id = ?");
 $stmt->bind_param("i", $donner_id);
 $stmt->execute();
-$summary = $stmt->get_result()->fetch_assoc();
+$donner = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-// Get claims on donations
-$stmt = $db->prepare("SELECT 
-                        COUNT(DISTINCT nc.claim_id) as total_claims,
-                        SUM(nc.quantity) as claimed_qty
-                     FROM Needy_Claim nc
-                     JOIN Donations d ON nc.donation_id = d.donation_id
-                     WHERE d.donner_id = ?");
-$stmt->bind_param("i", $donner_id);
-$stmt->execute();
-$claims_summary = $stmt->get_result()->fetch_assoc();
+// Get cart items
+$cart_items = getCartItems();
 
-// Get all donations
-$stmt = $db->prepare("SELECT d.donation_id, d.quantity_available, d.original_quantity,
-                            d.total_amount, d.donated_at,
-                            p.plate_name, r.restaurant_name,
-                            COALESCE(SUM(nc.quantity), 0) as claimed_qty
-                     FROM Donations d
-                     JOIN Plates p ON d.plate_id = p.plate_id
-                     JOIN Restaurants r ON p.restaurant_id = r.restaurant_id
-                     LEFT JOIN Needy_Claim nc ON d.donation_id = nc.donation_id
-                     WHERE d.donner_id = ?
-                     GROUP BY d.donation_id
-                     ORDER BY d.donated_at DESC");
-$stmt->bind_param("i", $donner_id);
-$stmt->execute();
-$all_donations = $stmt->get_result();
+if (empty($cart_items)) {
+    // No items in cart, redirect back
+    header('Location: donner_dashboard.php');
+    exit;
+}
+
+// Calculate totals from cart items
+$subtotal = 0;
+$cart_details = [];
+foreach ($cart_items as $item) {
+    $stmt = $db->prepare("SELECT p.plate_name, p.price, r.restaurant_name FROM Plates p 
+                         JOIN Restaurants r ON p.restaurant_id = r.restaurant_id WHERE p.plate_id = ?");
+    $stmt->bind_param("i", $item['plate_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $plate = $result->fetch_assoc();
+        $item_total = $plate['price'] * $item['quantity'];
+        $subtotal += $item_total;
+        $cart_details[] = [
+            'plate_id' => $item['plate_id'],
+            'plate_name' => $plate['plate_name'],
+            'restaurant_name' => $plate['restaurant_name'],
+            'quantity' => $item['quantity'],
+            'price' => $plate['price'],
+            'item_total' => $item_total
+        ];
+    }
+    $stmt->close();
+}
+
+$tax = $subtotal * 0.07;
+$total_donation = $subtotal + $tax;
+
+// Handle payment processing
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
+    $card_number = str_replace(' ', '', $_POST['card_number'] ?? '');
+    $card_expiry = $_POST['card_expiry'] ?? '';
+    $card_cvv = $_POST['card_cvv'] ?? '';
+    
+    // Validate card details
+    if (empty($card_number) || empty($card_expiry) || empty($card_cvv)) {
+        $error = "Please provide all payment details.";
+    } elseif (!preg_match('/^\d{13,19}$/', $card_number)) {
+        $error = "Invalid card number. Must be 13-19 digits.";
+    } elseif (!preg_match('/^\d{2}\/\d{2}$/', $card_expiry)) {
+        $error = "Invalid expiry format. Use MM/YY.";
+    } elseif (!preg_match('/^\d{3,4}$/', $card_cvv)) {
+        $error = "Invalid CVV. Must be 3-4 digits.";
+    } else {
+        // Validate card expiry (not expired)
+        $expiry_parts = explode('/', $card_expiry);
+        $expiry_month = (int)$expiry_parts[0];
+        $expiry_year = 2000 + (int)$expiry_parts[1];
+        $today = new DateTime();
+        $expiry_date = new DateTime($expiry_year . '-' . str_pad($expiry_month, 2, '0', STR_PAD_LEFT) . '-01');
+        $expiry_date->modify('last day of this month');
+        
+        if ($today > $expiry_date) {
+            $error = "Card has expired.";
+        } else {
+            // Process payment (simulate)
+            // In a real system, this would integrate with a payment processor like Stripe
+            
+            // Add all cart items to Donations table
+            $all_success = true;
+            foreach ($cart_details as $item) {
+                $stmt = $db->prepare("INSERT INTO Donations 
+                                    (donner_id, plate_id, quantity_available, original_quantity, total_amount, donated_at) 
+                                    VALUES (?, ?, ?, ?, ?, NOW())");
+                $stmt->bind_param("iiiii", $donner_id, $item['plate_id'], $item['quantity'], $item['quantity'], $item['item_total']);
+                
+                if (!$stmt->execute()) {
+                    $all_success = false;
+                    $error = "Failed to process donation for " . htmlspecialchars($item['plate_name']);
+                    break;
+                }
+                $stmt->close();
+            }
+            
+            if ($all_success) {
+                // Save card info
+                $stmt = $db->prepare("UPDATE Donners 
+                                   SET credit_card_number = ?, card_expiry = ?, card_cvv = ? 
+                                   WHERE donner_id = ?");
+                $stmt->bind_param("sssi", $card_number, $card_expiry, $card_cvv, $donner_id);
+                $stmt->execute();
+                $stmt->close();
+                
+                // Clear the cart
+                clearCart();
+                
+                $success = "Donation processed successfully! Meals added to donation pool.";
+                $cart_items = [];
+                $cart_details = [];
+                $total_donation = 0;
+            }
+        }
+    }
+}
 
 include 'includes/header.php';
 ?>
 
-<div class="container" style="max-width: 1200px; margin: 2rem auto;">
-    <h1>💝 Donation History</h1>
+<div class="container" style="max-width: 900px; margin: 2rem auto;">
+    <h1>Donation Checkout</h1>
     
-    <!-- Summary Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        <!-- Total Donations Card -->
-        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-            <div style="padding: 1.5rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">Total Donations</div>
-                <div style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">
-                    <?php echo $summary['total_donations'] ?? 0; ?>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Meals Donated Card -->
-        <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
-            <div style="padding: 1.5rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍽️</div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">Meals Donated</div>
-                <div style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">
-                    <?php echo $summary['total_meals_donated'] ?? 0; ?>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Total Value Card -->
-        <div class="card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-            <div style="padding: 1.5rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">Total Value</div>
-                <div style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">
-                    $<?php echo number_format($summary['total_value'] ?? 0, 2); ?>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Claims Card -->
-        <div class="card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #1a1a1a;">
-            <div style="padding: 1.5rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">✓</div>
-                <div style="font-size: 0.9rem; opacity: 0.9;">Claimed Meals</div>
-                <div style="font-size: 1.8rem; font-weight: 700; margin-top: 0.5rem;">
-                    <?php echo $claims_summary['claimed_qty'] ?? 0; ?>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php if ($error): ?>
+        <div class="alert alert-error"><?php echo $error; ?></div>
+    <?php endif; ?>
     
-    <!-- Impact Summary -->
-    <div class="card" style="background: var(--color-success-light); border-left: 4px solid var(--color-success); margin-bottom: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <strong style="font-size: 1.1rem;">🌟 Your Impact</strong>
-                <div style="color: var(--color-text-secondary); margin-top: 0.25rem;">
-                    You've donated <?php echo $summary['total_meals_donated'] ?? 0; ?> meals worth $<?php echo number_format($summary['total_value'] ?? 0, 2); ?> to people in need!
-                </div>
-            </div>
+    <?php if ($success): ?>
+        <div class="alert alert-success"><?php echo $success; ?></div>
+        <div style="margin-top: 2rem; text-align: center;">
+            <p>Thank you for your donation! These meals will help those in need.</p>
+            <a href="my_donations.php" class="btn btn-primary">View My Donations</a>
         </div>
-    </div>
-    
-    <!-- Donations Table -->
-    <div class="card">
-        <h2>Donation Details</h2>
-        
-        <?php if ($all_donations->num_rows > 0): ?>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Donation ID</th>
-                            <th>Meal</th>
-                            <th>Restaurant</th>
-                            <th>Original Qty</th>
-                            <th>Remaining</th>
-                            <th>Claimed</th>
-                            <th>Value</th>
-                            <th>Donated Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($donation = $all_donations->fetch_assoc()): ?>
-                            <tr>
-                                <td><strong>#<?php echo $donation['donation_id']; ?></strong></td>
-                                <td><?php echo htmlspecialchars($donation['plate_name']); ?></td>
-                                <td><?php echo htmlspecialchars($donation['restaurant_name']); ?></td>
-                                <td><?php echo $donation['original_quantity']; ?></td>
-                                <td>
-                                    <span class="badge <?php echo $donation['quantity_available'] > 0 ? 'badge-confirmed' : 'badge-inactive'; ?>">
-                                        <?php echo $donation['quantity_available']; ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge badge-success">
-                                        <?php echo $donation['claimed_qty']; ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <strong>$<?php echo number_format($donation['total_amount'], 2); ?></strong>
-                                </td>
-                                <td><?php echo date('M d, Y H:i', strtotime($donation['donated_at'])); ?></td>
-                            </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
+    <?php else: ?>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+            <!-- Donation Summary -->
+            <div class="card">
+                <h2>Donation Summary</h2>
+                
+                <?php if (!empty($cart_details)): ?>
+                    <div style="margin-bottom: 1.5rem;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--color-border);">
+                                    <th style="text-align: left; padding: 0.5rem;">Item</th>
+                                    <th style="text-align: center; padding: 0.5rem;">Price</th>
+                                    <th style="text-align: right; padding: 0.5rem;">Qty</th>
+                                    <th style="text-align: right; padding: 0.5rem;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($cart_details as $item): ?>
+                                    <tr style="border-bottom: 1px solid var(--color-border-light);">
+                                        <td style="padding: 0.75rem 0.5rem;">
+                                            <div><strong><?php echo htmlspecialchars($item['plate_name']); ?></strong></div>
+                                            <small style="color: var(--color-text-secondary);">
+                                                <?php echo htmlspecialchars($item['restaurant_name']); ?>
+                                            </small>
+                                        </td>
+                                        <td style="text-align: center; padding: 0.75rem 0.5rem;">
+                                            $<?php echo number_format($item['price'], 2); ?>
+                                        </td>
+                                        <td style="text-align: right; padding: 0.75rem 0.5rem;"><?php echo $item['quantity']; ?></td>
+                                        <td style="text-align: right; padding: 0.75rem 0.5rem;">
+                                            $<?php echo number_format($item['item_total'], 2); ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="background: var(--color-accent-light); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Subtotal:</span>
+                                <span>$<?php echo number_format($subtotal, 2); ?></span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Tax (7%):</span>
+                                <span>$<?php echo number_format($tax, 2); ?></span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid var(--color-accent); padding-top: 0.5rem;">
+                                <strong>Total Donation:</strong>
+                                <strong style="font-size: 1.5rem; color: var(--color-accent);">
+                                    $<?php echo number_format($total_donation, 2); ?>
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="view_cart.php" class="btn btn-secondary" style="width: 100%; text-align: center; padding: 0.75rem;">
+                        Back to Cart
+                    </a>
+                <?php else: ?>
+                    <p class="text-muted" style="padding: 2rem; text-align: center;">
+                        No items in cart.
+                    </p>
+                    <a href="donner_dashboard.php" class="btn btn-primary" style="width: 100%; text-align: center; padding: 0.75rem;">
+                        Browse Meals
+                    </a>
+                <?php endif; ?>
             </div>
-        <?php else: ?>
-            <p class="text-muted" style="text-align: center; padding: 2rem;">
-                No donations found. <a href="donner_dashboard.php">Make your first donation!</a>
-            </p>
-        <?php endif; ?>
-    </div>
-    
-    <!-- Action Buttons -->
-    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-        <a href="donner_dashboard.php" class="btn btn-secondary">
-            ← Back to Dashboard
-        </a>
-    </div>
+            
+            <!-- Payment Form -->
+            <?php if (!empty($cart_details)): ?>
+                <div class="card">
+                    <h2>Payment Information</h2>
+                    
+                    <form method="POST">
+                        <div style="margin-bottom: 1.5rem;">
+                            <label for="card_number"><strong>Card Number</strong></label>
+                            <input type="text" id="card_number" name="card_number" 
+                                   placeholder="1234 5678 9012 3456" maxlength="19"
+                                   value="<?php echo htmlspecialchars($donner['credit_card_number'] ?? ''); ?>"
+                                   required style="width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid var(--color-border); border-radius: 6px;">
+                            <small style="color: var(--color-text-secondary);">13-19 digits</small>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                            <div>
+                                <label for="card_expiry"><strong>Expiry</strong></label>
+                                <input type="text" id="card_expiry" name="card_expiry" 
+                                       placeholder="MM/YY"
+                                       value="<?php echo htmlspecialchars($donner['card_expiry'] ?? ''); ?>"
+                                       required style="width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid var(--color-border); border-radius: 6px;">
+                            </div>
+                            
+                            <div>
+                                <label for="card_cvv"><strong>CVV</strong></label>
+                                <input type="text" id="card_cvv" name="card_cvv" 
+                                       placeholder="123"
+                                       value="<?php echo htmlspecialchars($donner['card_cvv'] ?? ''); ?>"
+                                       required maxlength="4" style="width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid var(--color-border); border-radius: 6px;">
+                            </div>
+                        </div>
+                        
+                        <div style="background: var(--color-warning-light); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid var(--color-warning);">
+                            <small style="color: var(--color-warning);">
+                                <strong>❤️ Your Donation:</strong> These meals will be added to our donation pool for those in need.
+                            </small>
+                        </div>
+                        
+                        <button type="submit" name="process_payment" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;">
+                            Donate $<?php echo number_format($total_donation, 2); ?>
+                        </button>
+                        
+                        <a href="view_cart.php" class="btn btn-secondary" style="width: 100%; padding: 1rem; margin-top: 0.5rem; text-align: center;">
+                            Back
+                        </a>
+                    </form>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 </div>
-
-<style>
-.badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.badge-pending {
-    background-color: #fff8c5;
-    color: #9a6700;
-}
-
-.badge-confirmed {
-    background-color: #ddf4ff;
-    color: #0969da;
-}
-
-.badge-success {
-    background-color: #dafbe1;
-    color: #1a7f37;
-}
-
-.badge-inactive {
-    background-color: #f0f3f5;
-    color: #57606a;
-}
-</style>
 
 <?php 
 $db->close();

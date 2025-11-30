@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/config.php';
+require_once 'includes/cart.php';
 requireRole('customer');
 
 $page_title = 'Cashout';
@@ -14,25 +15,44 @@ $stmt->bind_param("i", $customer_id);
 $stmt->execute();
 $customer = $stmt->get_result()->fetch_assoc();
 
-// Get pending orders ready for checkout
-$stmt = $db->prepare("SELECT SUM(cr.total_amount) as total FROM Customer_Reservations cr 
-                     WHERE cr.customer_id = ? AND cr.status IN ('pending', 'confirmed')");
-$stmt->bind_param("i", $customer_id);
-$stmt->execute();
-$totals = $stmt->get_result()->fetch_assoc();
-$pending_total = $totals['total'] ?? 0;
+// Get cart items
+$cart_items = getCartItems();
 
-// Get order details
-$stmt = $db->prepare("SELECT cr.reservation_id, cr.quantity, cr.total_amount,
-                            p.plate_name, r.restaurant_name, cr.status
-                     FROM Customer_Reservations cr
-                     JOIN Plates p ON cr.plate_id = p.plate_id
-                     JOIN Restaurants r ON p.restaurant_id = r.restaurant_id
-                     WHERE cr.customer_id = ? AND cr.status IN ('pending', 'confirmed')
-                     ORDER BY cr.reserved_at DESC");
-$stmt->bind_param("i", $customer_id);
-$stmt->execute();
-$orders = $stmt->get_result();
+if (empty($cart_items)) {
+    // No items in cart, redirect back
+    header('Location: customer_dashboard.php');
+    exit;
+}
+
+// Calculate totals from cart items
+$subtotal = 0;
+$cart_details = [];
+foreach ($cart_items as $item) {
+    $stmt = $db->prepare("SELECT p.plate_name, p.price, r.restaurant_name, r.restaurant_id FROM Plates p 
+                         JOIN Restaurants r ON p.restaurant_id = r.restaurant_id WHERE p.plate_id = ?");
+    $stmt->bind_param("i", $item['plate_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $plate = $result->fetch_assoc();
+        $item_total = $plate['price'] * $item['quantity'];
+        $subtotal += $item_total;
+        $cart_details[] = [
+            'plate_id' => $item['plate_id'],
+            'plate_name' => $plate['plate_name'],
+            'restaurant_name' => $plate['restaurant_name'],
+            'restaurant_id' => $plate['restaurant_id'],
+            'quantity' => $item['quantity'],
+            'price' => $plate['price'],
+            'item_total' => $item_total
+        ];
+    }
+    $stmt->close();
+}
+
+$tax = $subtotal * 0.07;
+$pending_total = $subtotal + $tax;
 
 // Handle payment processing
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
@@ -64,26 +84,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
             // Process payment (simulate)
             // In a real system, this would integrate with a payment processor like Stripe
             
-            // Update all pending orders to confirmed
-            $stmt = $db->prepare("UPDATE Customer_Reservations 
-                               SET status = 'confirmed', confirmed_at = NOW() 
-                               WHERE customer_id = ? AND status = 'pending'");
-            $stmt->bind_param("i", $customer_id);
+            // Add all cart items to Customer_Reservations
+            $all_success = true;
+            foreach ($cart_details as $item) {
+                $stmt = $db->prepare("INSERT INTO Customer_Reservations 
+                                    (customer_id, plate_id, quantity, total_amount, status, reserved_at, confirmed_at) 
+                                    VALUES (?, ?, ?, ?, 'confirmed', NOW(), NOW())");
+                $stmt->bind_param("iiii", $customer_id, $item['plate_id'], $item['quantity'], $item['item_total']);
+                
+                if (!$stmt->execute()) {
+                    $all_success = false;
+                    $error = "Failed to process order for " . htmlspecialchars($item['plate_name']);
+                    break;
+                }
+                $stmt->close();
+            }
             
-            if ($stmt->execute()) {
-                // Save card info (masked for security)
-                $masked_card = 'XXXX' . substr($card_number, -4);
+            if ($all_success) {
+                // Save card info
                 $stmt = $db->prepare("UPDATE Customers 
                                    SET credit_card_number = ?, card_expiry = ?, card_cvv = ? 
                                    WHERE customer_id = ?");
                 $stmt->bind_param("sssi", $card_number, $card_expiry, $card_cvv, $customer_id);
                 $stmt->execute();
+                $stmt->close();
+                
+                // Clear the cart
+                clearCart();
                 
                 $success = "Payment processed successfully! All orders confirmed.";
+                $cart_items = [];
+                $cart_details = [];
                 $pending_total = 0;
-                $orders = $db->query("SELECT * FROM Customer_Reservations WHERE 1=0"); // Empty result
-            } else {
-                $error = "Failed to process payment. Please try again.";
             }
         }
     }
@@ -111,18 +143,19 @@ include 'includes/header.php';
             <div class="card">
                 <h2>Order Summary</h2>
                 
-                <?php if ($orders->num_rows > 0): ?>
+                <?php if (!empty($cart_details)): ?>
                     <div style="margin-bottom: 1.5rem;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--color-border);">
                                     <th style="text-align: left; padding: 0.5rem;">Item</th>
+                                    <th style="text-align: center; padding: 0.5rem;">Price</th>
                                     <th style="text-align: right; padding: 0.5rem;">Qty</th>
                                     <th style="text-align: right; padding: 0.5rem;">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php $orders->data_seek(0); while ($order = $orders->fetch_assoc()): ?>
+                                <?php foreach ($cart_details as $order): ?>
                                     <tr style="border-bottom: 1px solid var(--color-border-light);">
                                         <td style="padding: 0.75rem 0.5rem;">
                                             <div><strong><?php echo htmlspecialchars($order['plate_name']); ?></strong></div>
@@ -130,31 +163,44 @@ include 'includes/header.php';
                                                 <?php echo htmlspecialchars($order['restaurant_name']); ?>
                                             </small>
                                         </td>
+                                        <td style="text-align: center; padding: 0.75rem 0.5rem;">
+                                            $<?php echo number_format($order['price'], 2); ?>
+                                        </td>
                                         <td style="text-align: right; padding: 0.75rem 0.5rem;"><?php echo $order['quantity']; ?></td>
                                         <td style="text-align: right; padding: 0.75rem 0.5rem;">
-                                            $<?php echo number_format($order['total_amount'], 2); ?>
+                                            $<?php echo number_format($order['item_total'], 2); ?>
                                         </td>
                                     </tr>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
                     
                     <div style="background: var(--color-accent-light); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong>Total Amount:</strong>
-                            <strong style="font-size: 1.5rem; color: var(--color-accent);">
-                                $<?php echo number_format($pending_total, 2); ?>
-                            </strong>
+                        <div style="display: flex; justify-content: space-between; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Subtotal:</span>
+                                <span>$<?php echo number_format($subtotal, 2); ?></span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Tax (7%):</span>
+                                <span>$<?php echo number_format($tax, 2); ?></span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid var(--color-accent); padding-top: 0.5rem;">
+                                <strong>Total Amount:</strong>
+                                <strong style="font-size: 1.5rem; color: var(--color-accent);">
+                                    $<?php echo number_format($pending_total, 2); ?>
+                                </strong>
+                            </div>
                         </div>
                     </div>
                     
-                    <a href="my_orders.php" class="btn btn-secondary" style="width: 100%; text-align: center; padding: 0.75rem;">
-                        Edit Orders
+                    <a href="view_cart.php" class="btn btn-secondary" style="width: 100%; text-align: center; padding: 0.75rem;">
+                        Back to Cart
                     </a>
                 <?php else: ?>
                     <p class="text-muted" style="padding: 2rem; text-align: center;">
-                        No pending orders to checkout.
+                        No items in cart.
                     </p>
                     <a href="customer_dashboard.php" class="btn btn-primary" style="width: 100%; text-align: center; padding: 0.75rem;">
                         Browse Meals
@@ -163,7 +209,7 @@ include 'includes/header.php';
             </div>
             
             <!-- Payment Form -->
-            <?php if ($orders->num_rows > 0): ?>
+            <?php if (!empty($cart_details)): ?>
                 <div class="card">
                     <h2>Payment Information</h2>
                     

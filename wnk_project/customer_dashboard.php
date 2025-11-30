@@ -29,8 +29,8 @@ if (!$result) {
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h1>🛒 Browse Available Meals</h1>
-        <a href="cashout.php" class="btn btn-success" style="background-color: #1a7f37; text-decoration: none; padding: 0.75rem 1.5rem;">
-            🛍️ Checkout
+        <a href="view_cart.php" class="btn btn-success" style="background-color: #1a7f37; text-decoration: none; padding: 0.75rem 1.5rem;">
+            🛍️ View Cart
         </a>
     </div>
     <p>Get delicious meals from local restaurants at discounted prices!</p>
@@ -38,6 +38,7 @@ if (!$result) {
     <?php if ($result && $result->num_rows > 0): ?>
         <div class="meals-grid">
             <?php while ($plate = $result->fetch_assoc()): ?>
+                <?php if ($plate['available_count'] > 0): ?>
                 <div class="meal-card">
                     <div class="meal-header">
                         <h3><?php echo htmlspecialchars($plate['plate_name']); ?></h3>
@@ -55,21 +56,18 @@ if (!$result) {
                     </div>
                     
                     <p class="availability">
-                        <?php if ($plate['available_count'] > 0): ?>
-                            <span class="in-stock">✓ <?php echo $plate['available_count']; ?> available</span>
-                        <?php else: ?>
-                            <span class="out-of-stock">✗ Out of stock</span>
-                        <?php endif; ?>
+                        <span class="in-stock">✓ <?php echo $plate['available_count']; ?> available</span>
                     </p>
                     
-                    <?php if ($plate['available_count'] > 0): ?>
-                        <a href="buy_now.php?plate_id=<?php echo $plate['plate_id']; ?>" class="btn btn-primary">
-                            Buy Now
-                        </a>
-                    <?php else: ?>
-                        <button class="btn btn-disabled" disabled>Out of Stock</button>
-                    <?php endif; ?>
+                    <form method="POST" action="add_to_cart.php" style="display: flex; gap: 5px;">
+                        <input type="hidden" name="plate_id" value="<?php echo $plate['plate_id']; ?>">
+                        <input type="number" name="quantity" min="1" max="10" value="1" style="flex: 0.5; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                        <button type="submit" class="btn btn-primary" style="flex: 1; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; padding: 8px;">
+                            Add to Cart
+                        </button>
+                    </form>
                 </div>
+                <?php endif; ?>
             <?php endwhile; ?>
         </div>
     <?php else: ?>
