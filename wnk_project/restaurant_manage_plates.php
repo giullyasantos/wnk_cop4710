@@ -147,11 +147,6 @@ include 'includes/header.php';
         <div>
             <a href="restaurant_add_plate.php" class="btn btn-primary">Add New Plate</a>
         </div>
-        <div>
-            <a href="restaurant_cashout.php" class="btn btn-success" style="background-color: #1a7f37;">
-                💰 View Earnings
-            </a>
-        </div>
     </div>
     
     <div style="margin-bottom: 1rem;">
