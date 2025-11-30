@@ -7,17 +7,19 @@ include 'includes/header.php';
 
 $db = getDB();
 
-// Get donated meals available for those in need
-$query = "SELECT d.donation_id, p.plate_id, p.plate_name, p.description, 
-                 r.restaurant_name, d.donated_at,
-                 (d.quantity_available - COALESCE(SUM(CASE WHEN nc.status != 'cancelled' THEN nc.quantity ELSE 0 END), 0)) as available_count
+// Get donated meals available for those in need - grouped by plate to combine duplicates
+$query = "SELECT p.plate_id, p.plate_name, p.description, 
+                 r.restaurant_name, MAX(d.donated_at) as most_recent_donation,
+                 SUM(d.quantity_available - COALESCE((SELECT SUM(CASE WHEN nc.status != 'cancelled' THEN nc.quantity ELSE 0 END) 
+                                                       FROM Needy_Claim nc 
+                                                       WHERE nc.donation_id = d.donation_id), 0)) as total_available
           FROM Donations d
           JOIN Plates p ON d.plate_id = p.plate_id
           JOIN Restaurants r ON p.restaurant_id = r.restaurant_id
-          LEFT JOIN Needy_Claim nc ON d.donation_id = nc.donation_id
           WHERE d.quantity_available > 0
-          GROUP BY d.donation_id
-          ORDER BY d.donated_at DESC";
+          GROUP BY p.plate_id
+          HAVING total_available > 0
+          ORDER BY most_recent_donation DESC";
 
 $result = $db->query($query);
 if (!$result) {
@@ -26,45 +28,61 @@ if (!$result) {
 ?>
 
 <div class="container">
-    <h1>🤝 Free Meals Available</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>🤝 Free Meals Available</h1>
+        <a href="view_cart.php" class="btn btn-primary" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; border: none; cursor: pointer;">
+            View Cart
+        </a>
+    </div>
     <p>Community members have donated delicious meals for you to claim at no cost!</p>
+    
+    <?php if (isset($_SESSION['cart_error'])): ?>
+        <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+            <strong>⚠️ <?php echo $_SESSION['cart_error']; ?></strong>
+        </div>
+        <?php unset($_SESSION['cart_error']); ?>
+    <?php endif; ?>
     
     <div class="needy-info">
         <p>✓ These meals are completely <strong>FREE</strong> thanks to generous donors</p>
-        <p>✓ Simply click "Claim Meal" to receive your donation</p>
+        <p>✓ You can claim up to <strong>2 meals per day</strong></p>
         <p>✓ Available for pickup or delivery (contact restaurant for details)</p>
     </div>
     
     <?php if ($result && $result->num_rows > 0): ?>
         <div class="meals-grid">
-            <?php while ($donation = $result->fetch_assoc()): ?>
+            <?php while ($meal = $result->fetch_assoc()): ?>
+                <?php if ($meal['total_available'] > 0): ?>
                 <div class="meal-card free-meal-card">
                     <div class="meal-header">
                         <div class="free-badge">FREE 🎁</div>
-                        <h3><?php echo htmlspecialchars($donation['plate_name']); ?></h3>
+                        <h3><?php echo htmlspecialchars($meal['plate_name']); ?></h3>
                         <p class="restaurant-name">
-                            <strong><?php echo htmlspecialchars($donation['restaurant_name']); ?></strong>
+                            <strong><?php echo htmlspecialchars($meal['restaurant_name']); ?></strong>
                         </p>
                     </div>
                     
                     <p class="meal-description">
-                        <?php echo htmlspecialchars($donation['description']); ?>
+                        <?php echo htmlspecialchars($meal['description']); ?>
                     </p>
                     
                     <div class="donation-info">
-                        <p class="donated-by">💝 Donated by a community member</p>
+                        <p class="donated-by">💝 Donated by community members</p>
                         <p class="donated-time">
-                            Available since: <?php echo date('M j, Y g:i A', strtotime($donation['donated_at'])); ?>
+                            Most recent: <?php echo date('M j, Y g:i A', strtotime($meal['most_recent_donation'])); ?>
                         </p>
-                        <?php if ($donation['available_count'] > 0): ?>
-                            <p class="availability-count">Quantity available: <?php echo $donation['available_count']; ?></p>
-                        <?php endif; ?>
+                        <p class="availability-count">Total available: <?php echo $meal['total_available']; ?></p>
                     </div>
                     
-                    <a href="claim_meal.php?donation_id=<?php echo $donation['donation_id']; ?>" class="btn btn-claim">
-                        Claim This Meal
-                    </a>
+                    <form method="POST" action="add_to_cart.php" style="display: flex; gap: 5px;">
+                        <input type="hidden" name="plate_id" value="<?php echo $meal['plate_id']; ?>">
+                        <input type="number" name="quantity" min="1" max="<?php echo min(10, $meal['total_available']); ?>" value="1" style="flex: 0.5; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                        <button type="submit" class="btn btn-claim" style="flex: 1; background: #4caf50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                            Add to Cart
+                        </button>
+                    </form>
                 </div>
+                <?php endif; ?>
             <?php endwhile; ?>
         </div>
     <?php else: ?>

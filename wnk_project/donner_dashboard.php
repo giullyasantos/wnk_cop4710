@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/config.php';
+require_once 'includes/cart.php';
 requireRole('donner');
 
 $page_title = 'Donate Meals';
@@ -27,7 +28,12 @@ if (!$result) {
 ?>
 
 <div class="container">
-    <h1>❤️ Donate Meals to Those in Need</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>❤️ Donate Meals to Those in Need</h1>
+        <a href="view_cart.php" class="btn btn-primary" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; border: none; cursor: pointer;">
+            View Cart
+        </a>
+    </div>
     <p>Pay it forward by purchasing meals for community members in need. Your donation directly helps!</p>
     
     <div class="donor-info">
@@ -38,6 +44,7 @@ if (!$result) {
     <?php if ($result && $result->num_rows > 0): ?>
         <div class="meals-grid">
             <?php while ($plate = $result->fetch_assoc()): ?>
+                <?php if ($plate['available_count'] > 0): ?>
                 <div class="meal-card donation-card">
                     <div class="meal-header">
                         <h3><?php echo htmlspecialchars($plate['plate_name']); ?></h3>
@@ -51,7 +58,7 @@ if (!$result) {
                     </p>
                     
                     <div class="meal-pricing">
-                        <span class="donation-price">Donation amount: $<?php echo number_format($plate['price'], 2); ?></span>
+                        <span class="donation-price">Price per meal: $<?php echo number_format($plate['price'], 2); ?></span>
                     </div>
                     
                     <div class="donor-message">
@@ -59,21 +66,18 @@ if (!$result) {
                     </div>
                     
                     <p class="availability">
-                        <?php if ($plate['available_count'] > 0): ?>
-                            <span class="in-stock">✓ <?php echo $plate['available_count']; ?> available to donate</span>
-                        <?php else: ?>
-                            <span class="out-of-stock">✗ Out of stock</span>
-                        <?php endif; ?>
+                        <span class="in-stock">✓ <?php echo $plate['available_count']; ?> available to donate</span>
                     </p>
                     
-                    <?php if ($plate['available_count'] > 0): ?>
-                        <a href="donate_meal.php?plate_id=<?php echo $plate['plate_id']; ?>" class="btn btn-success">
-                            Donate This Meal
-                        </a>
-                    <?php else: ?>
-                        <button class="btn btn-disabled" disabled>Out of Stock</button>
-                    <?php endif; ?>
+                    <form method="POST" action="add_to_cart.php" style="display: flex; gap: 5px;">
+                        <input type="hidden" name="plate_id" value="<?php echo $plate['plate_id']; ?>">
+                        <input type="number" name="quantity" min="1" max="10" value="1" style="flex: 0.5; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;">
+                        <button type="submit" class="btn btn-success" style="flex: 1; background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px; cursor: pointer; font-weight: bold;">
+                            Add to Cart
+                        </button>
+                    </form>
                 </div>
+                <?php endif; ?>
             <?php endwhile; ?>
         </div>
     <?php else: ?>
@@ -104,6 +108,8 @@ if (!$result) {
     background: white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
 }
 
 .donation-card {
@@ -130,6 +136,7 @@ if (!$result) {
     color: #555;
     font-size: 14px;
     margin: 15px 0;
+    flex-grow: 1;
 }
 
 .meal-pricing {
@@ -177,6 +184,40 @@ if (!$result) {
     font-weight: bold;
 }
 
+.donation-form {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #28a745;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.total-display {
+    background: #fff3cd;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-weight: bold;
+    color: #ff6b6b;
+    text-align: center;
+}
+
 .btn-success {
     background: #28a745;
     color: white;
@@ -198,7 +239,12 @@ if (!$result) {
     color: #666;
     cursor: not-allowed;
     opacity: 0.6;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    display: inline-block;
 }
 </style>
 
 <?php include 'includes/footer.php'; ?>
+

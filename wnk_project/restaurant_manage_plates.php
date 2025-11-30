@@ -101,6 +101,34 @@ $stmt->bind_param("i", $restaurant_id);
 $stmt->execute();
 $plates = $stmt->get_result();
 
+// Function to determine plate status
+function getPlateStatus($plate) {
+    $now = new DateTime();
+    $expiration = new DateTime($plate['available_until']);
+    $is_expired = $now > $expiration;
+    $out_of_stock = $plate['quantity_available'] <= 0;
+    
+    if ($is_expired || $out_of_stock) {
+        return [
+            'status' => 'Inactive',
+            'badge_class' => 'badge-inactive',
+            'reason' => $is_expired ? 'Expired' : 'Out of Stock'
+        ];
+    } elseif ($plate['is_active']) {
+        return [
+            'status' => 'Active',
+            'badge_class' => 'badge-active',
+            'reason' => ''
+        ];
+    } else {
+        return [
+            'status' => 'Inactive',
+            'badge_class' => 'badge-inactive',
+            'reason' => 'Disabled'
+        ];
+    }
+}
+
 include 'includes/header.php';
 ?>
 
@@ -115,8 +143,15 @@ include 'includes/header.php';
         <div class="alert alert-success"><?php echo $success; ?></div>
     <?php endif; ?>
     
-    <div style="margin-bottom: 1rem;">
-        <a href="restaurant_add_plate.php" class="btn btn-primary">Add New Plate</a>
+    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; justify-content: space-between;">
+        <div>
+            <a href="restaurant_add_plate.php" class="btn btn-primary">Add New Plate</a>
+        </div>
+        <div>
+            <a href="restaurant_cashout.php" class="btn btn-success" style="background-color: #1a7f37;">
+                💰 View Earnings
+            </a>
+        </div>
     </div>
     
     <div style="margin-bottom: 1rem;">
@@ -134,12 +169,15 @@ include 'includes/header.php';
                     <th>Price</th>
                     <th>Available Qty</th>
                     <th>Time Window</th>
+                    <th>Expires</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php while ($plate = $plates->fetch_assoc()): ?>
+                <?php while ($plate = $plates->fetch_assoc()): 
+                    $plate_status = getPlateStatus($plate);
+                ?>
                     <tr>
                         <td>
                             <strong><?php echo htmlspecialchars($plate['plate_name']); ?></strong>
@@ -163,11 +201,15 @@ include 'includes/header.php';
                             </small>
                         </td>
                         <td>
-                            <?php if ($plate['is_active']): ?>
-                                <span class="badge badge-active">Active</span>
-                            <?php else: ?>
-                                <span class="badge badge-inactive">Inactive</span>
-                            <?php endif; ?>
+                            <small><?php echo date('M d, Y H:i', strtotime($plate['available_until'])); ?></small>
+                        </td>
+                        <td>
+                            <span class="badge <?php echo $plate_status['badge_class']; ?>">
+                                <?php echo $plate_status['status']; ?>
+                                <?php if ($plate_status['reason']): ?>
+                                    <br><small><?php echo $plate_status['reason']; ?></small>
+                                <?php endif; ?>
+                            </span>
                         </td>
                         <td>
                             <?php if ($plate['is_active']): ?>
