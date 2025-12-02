@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) {
         <nav class="navbar">
             <div class="container">
                 <div class="nav-brand">
-                    <a href="index.php">🍽️ Waste Not Kitchen</a>
+                    <a href="index.php"></a>
                 </div>
                 <ul class="nav-menu">
                     <?php if (isLoggedIn()): ?>

@@ -98,30 +98,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 include 'includes/header.php';
 ?>
 
-<div class="card" style="max-width: 500px; margin: 2rem auto;">
-    <h1>Login to WNK</h1>
-    
-    <?php if ($error): ?>
-        <div class="alert alert-error"><?php echo $error; ?></div>
-    <?php endif; ?>
-    
-    <form method="POST" action="login.php">
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required autofocus>
+<main style="display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 10rem); padding: 3rem 0;">
+    <div class="container">
+        <div class="card" style="max-width: 500px; margin: 0 auto;">
+            <h1>Login to WNK</h1>
+            
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?php echo $error; ?></div>
+            <?php endif; ?>
+            
+            <form method="POST" action="login.php">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+                
+                <p class="text-center mt-2">
+                    Don't have an account? <a href="register.php">Register here</a>
+                </p>
+            </form>
         </div>
-        
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        
-        <button type="submit" class="btn btn-primary btn-block">Login</button>
-        
-        <p class="text-center mt-2">
-            Don't have an account? <a href="register.php">Register here</a>
-        </p>
-    </form>
-</div>
+    </div>
+</main>
 
 <?php include 'includes/footer.php'; ?>
