@@ -29,8 +29,8 @@ if (!$result) {
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h1>🛒 Browse Available Meals</h1>
-        <a href="view_cart.php" class="btn btn-success" style="background-color: #1a7f37; text-decoration: none; padding: 0.75rem 1.5rem;">
-            🛍️ View Cart
+        <a href="view_cart.php" class="btn btn-primary">
+            🛒 View Cart
         </a>
     </div>
     <p>Get delicious meals from local restaurants at discounted prices!</p>

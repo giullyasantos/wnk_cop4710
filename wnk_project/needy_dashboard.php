@@ -30,8 +30,8 @@ if (!$result) {
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h1>🤝 Free Meals Available</h1>
-        <a href="view_cart.php" class="btn btn-primary" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; border: none; cursor: pointer;">
-            View Cart
+        <a href="view_cart.php" class="btn btn-primary">
+            🛒 View Cart
         </a>
     </div>
     <p>Community members have donated delicious meals for you to claim at no cost!</p>
