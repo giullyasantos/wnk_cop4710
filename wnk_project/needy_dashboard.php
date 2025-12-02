@@ -29,12 +29,12 @@ if (!$result) {
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h1>🤝 Free Meals Available</h1>
+        <h1 style="color: #fff;">🤝 Free Meals Available</h1>
         <a href="view_cart.php" class="btn btn-primary">
             🛒 View Cart
         </a>
     </div>
-    <p>Community members have donated delicious meals for you to claim at no cost!</p>
+    <p style="color: #fff;">Community members have donated delicious meals for you to claim at no cost!</p>
     
     <?php if (isset($_SESSION['cart_error'])): ?>
         <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px;">

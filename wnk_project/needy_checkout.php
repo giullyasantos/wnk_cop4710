@@ -118,7 +118,7 @@ include 'includes/header.php';
 ?>
 
 <div class="container" style="max-width: 900px; margin: 2rem auto;">
-    <h1>Confirm Your Claims</h1>
+    <h1 style="color: #fff;">Confirm Your Claims</h1>
     
     <?php if ($error): ?>
         <div class="alert alert-error" style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
@@ -131,7 +131,7 @@ include 'includes/header.php';
             ✓ <?php echo $success; ?>
         </div>
         <div style="margin-top: 2rem; text-align: center;">
-            <p>Your claims have been submitted and are pending confirmation.</p>
+            <p style="color: #fff;">Your claims have been submitted and are pending confirmation.</p>
             <a href="my_claims.php" class="btn btn-primary" style="background-color: #28a745; color: white; text-decoration: none; padding: 10px 20px; border-radius: 4px;">
                 View My Claims
             </a>

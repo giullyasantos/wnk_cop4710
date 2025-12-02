@@ -28,7 +28,7 @@ include 'includes/header.php';
 ?>
 
 <div class="container" style="max-width: 900px; margin: 2rem auto;">
-    <h1>🛒 Shopping Cart</h1>
+    <h1 style="color: #fff;">🛒 Shopping Cart</h1>
     
     <?php if (empty($cart_items)): ?>
         <div class="card" style="text-align: center; padding: 40px;">

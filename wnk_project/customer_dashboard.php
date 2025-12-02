@@ -28,12 +28,12 @@ if (!$result) {
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h1>🛒 Browse Available Meals</h1>
+        <h1 style="color: #fff;">🛒 Browse Available Meals</h1>
         <a href="view_cart.php" class="btn btn-primary">
             🛒 View Cart
         </a>
     </div>
-    <p>Get delicious meals from local restaurants at discounted prices!</p>
+    <p style="color: #fff;">Get delicious meals from local restaurants at discounted prices!</p>
     
     <?php if ($result && $result->num_rows > 0): ?>
         <div class="meals-grid">

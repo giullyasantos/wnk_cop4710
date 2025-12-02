@@ -125,7 +125,7 @@ include 'includes/header.php';
 ?>
 
 <div class="container" style="max-width: 900px; margin: 2rem auto;">
-    <h1>Checkout</h1>
+    <h1 style="color: #fff;">Checkout</h1>
     
     <?php if ($error): ?>
         <div class="alert alert-error"><?php echo $error; ?></div>
@@ -134,7 +134,7 @@ include 'includes/header.php';
     <?php if ($success): ?>
         <div class="alert alert-success"><?php echo $success; ?></div>
         <div style="margin-top: 2rem; text-align: center;">
-            <p>Thank you for your purchase! Your orders are now confirmed.</p>
+            <p style="color: #fff;">Thank you for your purchase! Your orders are now confirmed.</p>
             <a href="my_orders.php" class="btn btn-primary">View My Orders</a>
         </div>
     <?php else: ?>

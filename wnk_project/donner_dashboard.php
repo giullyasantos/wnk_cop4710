@@ -29,12 +29,12 @@ if (!$result) {
 
 <div class="container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h1>❤️ Donate Meals to Those in Need</h1>
+        <h1 style="color: #fff;">❤️ Donate Meals to Those in Need</h1>
         <a href="view_cart.php" class="btn btn-primary">
             🛒 View Cart
         </a>
     </div>
-    <p>Pay it forward by purchasing meals for community members in need. Your donation directly helps!</p>
+    <p style="color: #fff;">Pay it forward by purchasing meals for community members in need. Your donation directly helps!</p>
     
     <div class="donor-info">
         <p>As a donor, you're helping bridge the gap between restaurants and those who need a meal. 
