@@ -96,46 +96,46 @@ VALUES
 -- Plates from Mario's Italian Bistro
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Mario\'s Italian Bistro'), 
  'Surplus Lasagna', 'Fresh lasagna with meat sauce, made this morning', 8.99, 5, 10, 
- '2025-11-15 10:00:00', '2025-11-15 20:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Mario\'s Italian Bistro'), 
  'Leftover Pasta Carbonara', 'Creamy pasta carbonara, still warm', 7.50, 3, 8, 
- '2025-11-16 11:00:00', '2025-11-16 21:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Mario\'s Italian Bistro'), 
  'Extra Pizza Margherita', 'Large pizza, half eaten but fresh', 6.99, 0, 4, 
- '2025-11-10 12:00:00', '2025-11-10 22:00:00', FALSE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', FALSE),
 
 -- Plates from Tanaka Sushi House
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Tanaka Sushi House'), 
  'Surplus Sushi Platter', 'Assorted sushi rolls, made fresh today', 12.99, 8, 15, 
- '2025-11-15 11:00:00', '2025-11-15 21:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Tanaka Sushi House'), 
  'Extra Tempura Set', 'Vegetable and shrimp tempura', 9.99, 4, 6, 
- '2025-11-16 12:00:00', '2025-11-16 22:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Tanaka Sushi House'), 
  'Leftover Teriyaki Bowl', 'Chicken teriyaki with rice', 8.50, 0, 5, 
- '2025-11-12 13:00:00', '2025-11-12 23:00:00', FALSE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', FALSE),
 
 -- Plates from Bob's BBQ Joint
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Bob\'s BBQ Joint'), 
  'Surplus Pulled Pork', 'Slow-smoked pulled pork, 2 lbs', 10.99, 6, 10, 
- '2025-11-15 14:00:00', '2025-11-15 23:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Bob\'s BBQ Joint'), 
  'Extra BBQ Ribs', 'Full rack of ribs with sides', 15.99, 2, 5, 
- '2025-11-16 15:00:00', '2025-11-17 00:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Bob\'s BBQ Joint'), 
  'Leftover Brisket', 'Texas-style brisket, 1.5 lbs', 12.50, 0, 3, 
- '2025-11-11 16:00:00', '2025-11-11 23:00:00', FALSE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', FALSE),
 
 -- Plates from Carlos' Mexican Cantina
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Carlos\' Mexican Cantina'), 
  'Surplus Taco Platter', 'Assorted tacos (beef, chicken, fish)', 9.99, 7, 12, 
- '2025-11-15 16:00:00', '2025-11-16 01:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Carlos\' Mexican Cantina'), 
  'Extra Burrito Bowl', 'Large burrito bowl with all toppings', 8.99, 5, 8, 
- '2025-11-16 17:00:00', '2025-11-17 02:00:00', TRUE),
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', TRUE),
 ((SELECT restaurant_id FROM Restaurants WHERE restaurant_name = 'Carlos\' Mexican Cantina'), 
  'Leftover Quesadillas', 'Cheese and chicken quesadillas', 7.50, 0, 6, 
- '2025-11-13 18:00:00', '2025-11-13 23:00:00', FALSE);
+ '2025-12-03 09:00:00', '2025-12-04 09:00:00', FALSE);
 
 -- ============================================
 -- CUSTOMER RESERVATIONS
